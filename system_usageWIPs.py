@@ -174,4 +174,5 @@ if context_project_input:
 
 # ---------- Display ----------
 st.write(f"### Showing {len(filtered_notes)} notes")
-st.dataframe(filtered_notes.reset_index(drop=True), use_container_width=True)
+st.data_editor(filtered_notes.reset_index(drop=True), use_container_width=True, disabled=True)
+

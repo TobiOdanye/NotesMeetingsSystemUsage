@@ -7,6 +7,7 @@ import re
 import os
 import numpy as np
 from itertools import cycle
+import streamlit as st
 
 def fetch_api_tokens():
     api_tokens = [
@@ -159,5 +160,28 @@ def fetch_notes(api_tokens):
 
 api_tokens = fetch_api_tokens()
 notes = fetch_notes(api_tokens)
-notes.to_excel("C:/Users/TobiOdanyeEncoreSear/OneDrive - Encore Search/Documents/notes_test.xlsx", index=False)
+
+st.title("User Note Viewer (2025)")
+
+# User inputs for filtering
+author_input = st.text_input("Enter Author name (e.g., John)")
+week_input = st.number_input("Enter Week number", min_value=1, max_value=53, step=1)
+context_project_input = st.text_input("Enter Context Project ID (e.g., 12345)")
+
+# Button to trigger filtering
+if st.button("Filter Notes"):
+    df = notes.copy()
+
+    # Apply filters conditionally
+    if author_input:
+        df = df[df["Author"].str.lower() == author_input.lower()]
+
+    if week_input:
+        df = df[df["Week"] == week_input]
+
+    if context_project_input:
+        df = df[df["Context Project IDs"].str.contains(str(context_project_input), na=False)]
+
+    st.write(f"### Filtered Notes ({len(df)} results)")
+    st.dataframe(df.reset_index(drop=True))
 

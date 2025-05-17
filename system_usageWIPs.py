@@ -161,27 +161,34 @@ def fetch_notes(api_tokens):
 api_tokens = fetch_api_tokens()
 notes = fetch_notes(api_tokens)
 
-st.title("User Note Viewer (2025)")
+st.title("Mandate System Usage - WIPs (2025)")
 
-# User inputs for filtering
-author_input = st.text_input("Enter Author name (e.g., John)")
-week_input = st.number_input("Enter Week number", min_value=1, max_value=53, step=1)
-context_project_input = st.text_input("Enter Context Project ID (e.g., 12345)")
+@st.cache_data(show_spinner="Loading notes from Ezekia API...")
+def load_notes():
+    api_tokens = fetch_api_tokens()
+    return fetch_notes(api_tokens)
 
-# Button to trigger filtering
-if st.button("Filter Notes"):
-    df = notes.copy()
+# Load once and cache
+notes = load_notes()
 
-    # Apply filters conditionally
-    if author_input:
-        df = df[df["Author"].str.lower() == author_input.lower()]
+# --- Filter UI ---
+author_input = st.text_input("Filter by Author")
+week_input = st.number_input("Filter by Week", min_value=1, max_value=53, step=1, format="%d")
+context_project_input = st.text_input("Filter by Context Project ID (partial match allowed)")
 
-    if week_input:
-        df = df[df["Week"] == week_input]
+# --- Apply filters without reloading ---
+filtered_notes = notes.copy()
 
-    if context_project_input:
-        df = df[df["Context Project IDs"].str.contains(str(context_project_input), na=False)]
+if author_input:
+    filtered_notes = filtered_notes[filtered_notes["Author"].str.lower() == author_input.lower()]
 
-    st.write(f"### Filtered Notes ({len(df)} results)")
-    st.dataframe(df.reset_index(drop=True))
+if week_input:
+    filtered_notes = filtered_notes[filtered_notes["Week"] == week_input]
+
+if context_project_input:
+    filtered_notes = filtered_notes[filtered_notes["Context Project IDs"].str.contains(context_project_input, na=False)]
+
+# --- Display ---
+st.write(f"### Showing {len(filtered_notes)} notes")
+st.dataframe(filtered_notes.reset_index(drop=True))
 

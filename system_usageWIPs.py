@@ -74,81 +74,104 @@ def fetch_api_tokens():
     return api_tokens
 
 
-# ---------- DATA FETCHING FUNCTION ----------
 def fetch_notes(api_tokens):
-    base_url = "https://ezekia.com/api/notes?noteType=user"
-    headers = {"Authorization": f"Bearer {api_tokens[0]}", "Content-Type": "application/json"}
-    response = requests.get(base_url, headers=headers)
-    last_page = response.json()['meta']['lastPage']
+    base_url_agg = "https://ezekia.com/api/notes?noteType=user"
+
+    headers = {
+        "Authorization": f"Bearer {api_tokens[0]}",
+        "Content-Type": "application/json"
+    }
+
+    response = requests.get(base_url_agg, headers=headers)
+    last_page_notes = response.json()['meta']['lastPage']
+    print(f"Total Pages: {last_page_notes}")
 
     user_notes_list = []
+    for page in range(1, last_page_notes + 1):
+        api_token = api_tokens[(page - 1) // 3 % len(api_tokens)]
+        headers = {
+            "Authorization": f"Bearer {api_token}",
+            "Content-Type": "application/json"
+        }
 
-    for page in range(1, last_page + 1):
-        token = api_tokens[(page - 1) // 3 % len(api_tokens)]
-        headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
-        url = f"{base_url}&sortBy=%60createdAt%60&sortOrder=desc&page={page}"
-        resp = requests.get(url, headers=headers)
+        page_url = f"https://ezekia.com/api/notes?noteType=user&sortBy=%60createdAt%60&sortOrder=desc&page={page}"
+        page_response = requests.get(page_url, headers=headers)
 
-        if resp.status_code != 200:
-            continue
+        if page_response.status_code == 200:
+            print(f"Fetched notes page {page} from Ezekia API")
+        else:
+            print(f"Failed to fetch data for page {page}. Status Code: {page_response.status_code}")
 
-        for note in resp.json()["data"]:
+        for note in page_response.json()["data"]:
             note_date = pd.to_datetime(note["date"][:10])
+            note_author = note["author"]
+            note_type = ', '.join([i["text"] for i in note["tags"]]) if "tags" in note and note["tags"] else None
+            note_notable_id = note["notable"]["id"] if "notable" in note and note["notable"] else None
+            note_notable_type = note["notable"]["type"] if "notable" in note and note["notable"] else None
+            note_notable_name = note["notable"]["name"] if "notable" in note and note["notable"] else None
+            note_context_project_id = ', '.join([str(i["projectId"]) for i in note["context"]]) if "context" in note and note["context"] else None
+            if note_context_project_id is not None:
+                note_context_project_id = note_context_project_id.replace(', None', '').replace('None, ', '').replace('None', '').strip()
+            note_context_type = ', '.join([i["type"] for i in note["context"]]) if "context" in note and note["context"] else None
+            note_context_name = ', '.join([i["name"] for i in note["context"]]) if "context" in note and note["context"] else None
+            note_text_header = note["textStripped"].split('\n')[0]
+
             start_of_year = pd.to_datetime(f'{note_date.year}-01-01')
-            first_sunday = start_of_year + timedelta(days=(6 - start_of_year.weekday()) % 7)
-            days_since = (note_date - first_sunday).days
-            week = 1 if days_since < 0 else (days_since // 7) + 2
+            days_to_sunday = (6 - start_of_year.weekday()) % 7
+            first_sunday = start_of_year + pd.Timedelta(days=days_to_sunday)
+            days_since_first_sunday = (note_date - first_sunday).days
+            if days_since_first_sunday < 0:
+                note_week = 1
+            else:
+                note_week = (days_since_first_sunday // 7) + 2
 
-            context_ids = ', '.join([str(i["projectId"]) for i in note.get("context", []) if i.get("projectId")]) or None
-            if context_ids:
-                context_ids = context_ids.replace(', None', '').replace('None, ', '').replace('None', '').strip()
+            note_month = int(note["date"][5:7])
+            note_quarter = note_date.quarter
+            note_year = int(note["date"][:4])
 
-            user_notes_list.append({
-                "Date": note_date,
-                "Year": int(note["date"][:4]),
-                "Week": week,
-                "Month": int(note["date"][5:7]),
-                "Quarter": note_date.quarter,
-                "Author": note["author"].split()[0],
-                "Note Tag(s)": ', '.join([i["text"] for i in note.get("tags", [])]) or None,
-                "Notable ID": note.get("notable", {}).get("id"),
-                "Note Type(s)": note.get("notable", {}).get("type"),
-                "Note Name(s)": note.get("notable", {}).get("name"),
-                "Context Project IDs": context_ids,
-                "Context Type(s)": ', '.join([i["type"] for i in note.get("context", [])]) or None,
-                "Context Name(s)": ', '.join([i["name"] for i in note.get("context", [])]) or None,
-                "Note Header": note.get("textStripped", "").split('\n')[0]
-            })
+            user_notes_list.append(
+                {"Date": note_date, "Year": note_year, "Week": note_week, "Month": note_month, "Quarter": note_quarter,
+                 "Author": note_author.split()[0], "Note Tag(s)": note_type, "Notable ID": note_notable_id,
+                 "Note Type(s)": note_notable_type, "Note Name(s)": note_notable_name,
+                 "Context Project IDs": note_context_project_id,
+                 "Context Type(s)": note_context_type, "Context Name(s)": note_context_name,
+                 "Note Header": note_text_header})
 
-    df = pd.DataFrame(user_notes_list)
-    return df[df["Year"] == 2025].sort_values(by="Date", ascending=False)
+    user_note_df = pd.DataFrame(user_notes_list)
+    user_note_df = user_note_df[["Author", "Date", "Week", "Note Type(s)",
+                                 "Context Project IDs", "Note Tag(s)", "Note Name(s)",
+                                 "Context Type(s)", "Context Name(s)", "Note Header"]][user_note_df["Year"] == 2025].sort_values(by="Date", ascending=False)
 
-# ---------- STREAMLIT APP ----------
+    return user_note_df
+
+# ---------- Streamlit App ----------
 st.set_page_config(page_title="Mandate System Usage - WIPs", layout="wide")
 st.title("Mandate System Usage - WIPs (2025)")
 
 @st.cache_data(show_spinner="Loading notes from Ezekia API...")
 def load_notes():
-    tokens = fetch_api_tokens()
-    return fetch_notes(tokens)
+    api_tokens = fetch_api_tokens()
+    return fetch_notes(api_tokens)
 
-notes_df = load_notes()
+# Load and cache notes once
+notes = load_notes()
 
-# ---------- FILTERS ----------
+# ---------- Filters ----------
 author_input = st.text_input("Filter by Author")
 week_input = st.number_input("Filter by Week", min_value=1, max_value=53, step=1, format="%d")
 context_project_input = st.text_input("Filter by Context Project ID (partial match allowed)")
 
-filtered = notes_df.copy()
+filtered_notes = notes.copy()
 
 if author_input:
-    filtered = filtered[filtered["Author"].str.lower() == author_input.lower()]
+    filtered_notes = filtered_notes[filtered_notes["Author"].str.lower() == author_input.lower()]
 
 if week_input:
-    filtered = filtered[filtered["Week"] == week_input]
+    filtered_notes = filtered_notes[filtered_notes["Week"] == week_input]
 
 if context_project_input:
-    filtered = filtered[filtered["Context Project IDs"].str.contains(context_project_input, case=False, na=False)]
+    filtered_notes = filtered_notes[filtered_notes["Context Project IDs"].str.contains(context_project_input, case=False, na=False)]
 
-st.write(f"### Showing {len(filtered)} notes")
-st.dataframe(filtered.reset_index(drop=True))
+# ---------- Display ----------
+st.write(f"### Showing {len(filtered_notes)} notes")
+st.dataframe(filtered_notes.reset_index(drop=True), use_container_width=True)

@@ -244,7 +244,7 @@ st.title("Mandate System Usage - WIPs (2025)")
 def load_notes_meetings():
     api_tokens = fetch_api_tokens()
     notes = fetch_notes(api_tokens)
-    meetings = fetch_meetings
+    meetings = fetch_meetings(api_tokens)
     combined_df = pd.concat([notes, meetings], ignore_index=True)
     combined_df = combined_df[["Author", "Week", "Date", "Type", "Note Type(s)", "Note Header", "Note Name(s)", "Note Tag(s)", 
                                "Context Project IDs", "Context Type(s)", "Context Name(s)"]]

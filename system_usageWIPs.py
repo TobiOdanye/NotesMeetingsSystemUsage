@@ -149,21 +149,21 @@ def fetch_meetings(api_tokens):
                                              meeting["assignees"] and entry['type'] == 'candidate']) or None
             
             if meeting["channels"]:
-                context_project_name = ', '.join(entry["name"] for entry in meeting["channels"] if entry["type"] in ["opportunity", "list", "assignment"]) or None
+                context_name = ', '.join(entry["name"] for entry in meeting["channels"] if entry["type"] in ["opportunity", "list", "assignment", "person"]) or None
             else:
-                context_project_name = None
+                context_name = None
 
 
             if meeting["channels"]:
-                context_project_name = ', '.join(entry["label"] for entry in meeting["channels"] if entry["type"] in ["opportunity", "list", "assignment"]) or None
+                context_label = ', '.join(entry["label"] for entry in meeting["channels"] if entry["type"] in ["opportunity", "list", "assignment", "person"]) or None
             else:
-                context_project_name = None
+                context_label = None
 
             # Append extracted values to the list
             meetings_list.append({"Date": meeting_date, "Year": meeting_year, "Week": meeting_week, "Type": 'Meeting',
                                   "Author": meeting_organizer.split()[0], "Note Name(s)": None, "Note Type": None,
                                   "Note Header": meeting_title, "Note Tag(s)": meeting_tag, "Company": meeting_company, 
-                                  "Consultants": meeting_consultants, "Context Name(s)": context_name, "Context Type(s)": context_type})
+                                  "Consultants": meeting_consultants, "Context Name(s)": context_name, "Context Type(s)": context_label})
 
     # Create a DataFrame from the list of meeting data points
     meetings_df = pd.DataFrame(meetings_list).reset_index(drop=True)

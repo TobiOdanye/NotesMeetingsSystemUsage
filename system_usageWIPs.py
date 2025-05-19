@@ -148,9 +148,9 @@ def fetch_meetings(api_tokens):
             meeting_consultants = ', '.join([entry['fullname'] for entry in meeting["assignees"] if
                                              meeting["assignees"] and entry['type'] == 'candidate']) or None
             
-            context_project_id = entry['name'] for entry in meeting["channels"] if meeting["channels"] and entry['type'] in ['opportunity', 'list', 'assignment'] or None
-            context_name = entry['name'] for entry in meeting["channels"] if meeting["channels"] and entry['type'] in ['opportunity', 'list', 'assignment', 'person'] or None
-            context_type = entry['label'] for entry in meeting["channels"] if meeting["channels"] and entry['type'] in ['opportunity', 'list', 'assignment', 'person'] or None
+            context_project_id = ', '.join([i["id"] for i in meeting["channels"]]) if "channels" in meeting and meeting["type"] in ['opportunity', 'list', 'assignment'] else None
+            context_project_id = ', '.join([i["name"] for i in meeting["channels"]]) if "channels" in meeting and meeting["type"] in ['opportunity', 'list', 'assignment'] else None
+            context_project_id = ', '.join([i["label"] for i in meeting["channels"]]) if "channels" in meeting and meeting["type"] in ['opportunity', 'list', 'assignment'] else None
 
             # Append extracted values to the list
             meetings_list.append({"Date": meeting_date, "Year": meeting_year, "Week": meeting_week, "Type": 'Meeting',

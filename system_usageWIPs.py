@@ -74,6 +74,98 @@ def fetch_api_tokens():
     return api_tokens
 
 
+def fetch_meetings(api_tokens):
+    
+    print('testing3')
+    api_token = api_tokens[0]
+
+    # Ezekia URL for total meeting and page (api) count
+    base_url_agg = "https://ezekia.com/api/meetings?page=1000000"
+
+    # Headers to authenticate API request for total counts
+    headers = {
+        "Authorization": f"Bearer {api_token}",
+        "Content-Type": "application/json"  # Adjust content type if necessary
+    }
+
+    # API request (GET request) for total counts
+    response = requests.get(base_url_agg, headers=headers)
+
+    # Extract the "total" and "last_page" values
+    total_meetings = response.json()['meta']['total']
+    last_page_meetings = response.json()['meta']['last_page']
+
+    # Print the extracted values
+    print(f"Total Meetings: {total_meetings}")
+    print(f"Total Pages: {last_page_meetings}")
+
+    # Loop through pages in Ezekia API and store in dataframe
+    meetings_list = []
+    for page in range(1, last_page_meetings+1):
+
+        api_token = api_tokens[(page - 1) // 3 % len(api_tokens)]
+
+        # Headers to authenticate API request for total counts
+        headers = {
+            "Authorization": f"Bearer {api_tokens[0]}",
+            "Content-Type": "application/json"  # Adjust content type if necessary
+        }
+
+        page_url = f"https://ezekia.com/api/meetings?page={page}&order=desc"
+        page_response = requests.get(page_url, headers=headers)
+
+        if page_response.status_code == 200:
+            page_data = page_response.json()  # Get the JSON response for the current page
+
+        for meeting in page_response.json()["data"]:
+            meeting_date = pd.to_datetime(meeting["date"][:10])
+            meeting_organizer = meeting["organizer"].split(" <")[0].strip().split(" | Encore Search")[0].strip()
+            meeting_title = meeting["title"]
+            print(meeting_title)
+
+            # Step 1: Set January 1st of the year as the start of Week 1
+            start_of_year = pd.to_datetime(f'{meeting_date.year}-01-01')
+            days_to_sunday = (6 - start_of_year.weekday()) % 7
+            first_sunday = start_of_year + pd.Timedelta(days=days_to_sunday)
+            days_since_first_sunday = (meeting_date - first_sunday).days
+            if days_since_first_sunday < 0:
+                meeting_week = 1  # The date is within Week 1
+            else:
+                meeting_week = (days_since_first_sunday // 7) + 2
+
+            meeting_month = meeting["date"][5:7]
+            meeting_quarter = meeting_date.quarter
+            meeting_year = meeting["date"][:4]
+
+            if meeting["tag"] is not None:
+                meeting_tag = meeting["tag"]["text"]
+            else:
+                meeting_tag = None
+
+            meeting_company = ', '.join([entry['name'] for entry in meeting["channels"] if
+                                             meeting["channels"] and entry['type'] == 'client' and entry['label'] == 'company']) or None
+            
+            meeting_consultants = ', '.join([entry['fullname'] for entry in meeting["assignees"] if
+                                             meeting["assignees"] and entry['type'] == 'candidate']) or None
+            
+            context_project_id = entry['name'] for entry in meeting["channels"] if meeting["channels"] and entry['type'] in ['opportunity', 'list', 'assignment'] or None
+            context_name = entry['name'] for entry in meeting["channels"] if meeting["channels"] and entry['type'] in ['opportunity', 'list', 'assignment', 'person'] or None
+            context_type = entry['label'] for entry in meeting["channels"] if meeting["channels"] and entry['type'] in ['opportunity', 'list', 'assignment', 'person'] or None
+
+            # Append extracted values to the list
+            meetings_list.append({"Date": meeting_date, "Year": meeting_year, "Week": meeting_week, "Type": 'Meeting',
+                                  "Author": meeting_organizer.split()[0], "Context Project IDs": context_project_id, "Note Name(s)": None, "Note Type": None,
+                                  "Note Header": meeting_title, "Note Tag(s)": meeting_tag, "Company": meeting_company, 
+                                  "Consultants": meeting_consultants, "Context Name(s)": context_name, "Context Type(s)": context_type})
+
+    # Create a DataFrame from the list of meeting data points
+    meetings_df = pd.DataFrame(meetings_list).reset_index(drop=True)
+    meetings_df = meetings_df[["Author", "Week", "Date", "Note Type(s)", "Note Header", "Note Name(s)", "Note Tag(s)", 
+                               "Context Project IDs", "Context Type(s)", "Context Name(s)"]]
+    
+    return meetings_df
+
+
 def fetch_notes(api_tokens):
     base_url_agg = "https://ezekia.com/api/notes?noteType=user"
 
@@ -131,7 +223,7 @@ def fetch_notes(api_tokens):
 
             user_notes_list.append(
                 {"Date": note_date, "Year": note_year, "Week": note_week, "Month": note_month, "Quarter": note_quarter,
-                 "Author": note_author.split()[0], "Note Tag(s)": note_type, "Notable ID": note_notable_id,
+                 "Author": note_author.split()[0], "Note Tag(s)": note_type, "Notable ID": note_notable_id, "Type": 'Note'
                  "Note Type(s)": note_notable_type, "Note Name(s)": note_notable_name,
                  "Context Project IDs": note_context_project_id,
                  "Context Type(s)": note_context_type, "Context Name(s)": note_context_name,
@@ -149,28 +241,35 @@ st.set_page_config(page_title="Mandate System Usage - WIPs", layout="wide")
 st.title("Mandate System Usage - WIPs (2025)")
 
 @st.cache_data(show_spinner="Loading notes from Ezekia API...")
-def load_notes():
+def load_notes_meetings():
     api_tokens = fetch_api_tokens()
-    return fetch_notes(api_tokens)
+    notes = fetch_notes(api_tokens)
+    meetings = fetch_meetings
+    combined_df = pd.concat([notes, meetings], ignore_index=True)
+    combined_df = combined_df[["Author", "Week", "Date", "Type", "Note Type(s)", "Note Header", "Note Name(s)", "Note Tag(s)", 
+                               "Context Project IDs", "Context Type(s)", "Context Name(s)"]]
+    combined_df = combined_df.rename(columns={col: col.replace('note', 'note or meeting') for col in combined_df.columns if 'note' in col})
+    
+    return combined_df
 
 # Load and cache notes once
-notes = load_notes()
+notes_meetings = load_notes_meetings()
 
 # ---------- Filters ----------
 author_input = st.text_input("Filter by Author")
 week_input = st.number_input("Filter by Week", min_value=1, max_value=53, step=1, format="%d")
 context_project_input = st.text_input("Filter by Context Project ID (partial match allowed)")
 
-filtered_notes = notes.copy()
+filtered_notes_meetings = notes_meetings.copy()
 
 if author_input:
-    filtered_notes = filtered_notes[filtered_notes["Author"].str.lower() == author_input.lower()]
+    filtered_notes_meetings = filtered_notes_meetings[filtered_notes_meetings["Author"].str.lower() == author_input.lower()]
 
 if week_input:
-    filtered_notes = filtered_notes[filtered_notes["Week"] == week_input]
+    filtered_notes_meetings = filtered_notes_meetings[filtered_notes_meetings["Week"] == week_input]
 
 if context_project_input:
-    filtered_notes = filtered_notes[filtered_notes["Context Project IDs"].str.contains(context_project_input, case=False, na=False)]
+    filtered_notes_meetings = filtered_notes_meetings[filtered_notes_meetings["Context Project IDs"].str.contains(context_project_input, case=False, na=False)]
 
 # ---------- Display ----------
 st.write(f"### Showing {len(filtered_notes)} notes")

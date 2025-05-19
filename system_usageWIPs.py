@@ -223,7 +223,7 @@ def fetch_notes(api_tokens):
 
             user_notes_list.append(
                 {"Date": note_date, "Year": note_year, "Week": note_week, "Month": note_month, "Quarter": note_quarter,
-                 "Author": note_author.split()[0], "Note Tag(s)": note_type, "Notable ID": note_notable_id, "Type": 'Note'
+                 "Author": note_author.split()[0], "Note Tag(s)": note_type, "Notable ID": note_notable_id, "Type": 'Note',
                  "Note Type(s)": note_notable_type, "Note Name(s)": note_notable_name,
                  "Context Project IDs": note_context_project_id,
                  "Context Type(s)": note_context_type, "Context Name(s)": note_context_name,

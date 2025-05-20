@@ -75,7 +75,6 @@ def fetch_api_tokens():
 
 
 def fetch_meetings(api_tokens):
-    
     print('testing3')
     api_token = api_tokens[0]
 
@@ -101,13 +100,13 @@ def fetch_meetings(api_tokens):
 
     # Loop through pages in Ezekia API and store in dataframe
     meetings_list = []
-    for page in range(1, last_page_meetings+1):
+    for page in range(1, last_page_meetings + 1):
 
         api_token = api_tokens[(page - 1) // 3 % len(api_tokens)]
 
         # Headers to authenticate API request for total counts
         headers = {
-            "Authorization": f"Bearer {api_tokens[0]}",
+            "Authorization": f"Bearer {api_token}",
             "Content-Type": "application/json"  # Adjust content type if necessary
         }
 
@@ -143,33 +142,37 @@ def fetch_meetings(api_tokens):
                 meeting_tag = None
 
             meeting_company = ', '.join([entry['name'] for entry in meeting["channels"] if
-                                             meeting["channels"] and entry['type'] == 'client' and entry['label'] == 'company']) or None
-            
+                                         meeting["channels"] and entry['type'] == 'client' and entry[
+                                             'label'] == 'company']) or None
+
             meeting_consultants = ', '.join([entry['fullname'] for entry in meeting["assignees"] if
                                              meeting["assignees"] and entry['type'] == 'candidate']) or None
-            
+
             if meeting["channels"]:
-                context_name = ', '.join(entry["name"] for entry in meeting["channels"] if entry["type"] in ["opportunity", "list", "assignment", "person"]) or None
+                context_name = ', '.join(entry["name"] for entry in meeting["channels"] if
+                                         entry["type"] in ["opportunity", "list", "assignment", "person"]) or None
             else:
                 context_name = None
 
-
             if meeting["channels"]:
-                context_label = ', '.join(entry["label"] for entry in meeting["channels"] if entry["type"] in ["opportunity", "list", "assignment", "person"]) or None
+                context_label = ', '.join(entry["label"] for entry in meeting["channels"] if
+                                          entry["type"] in ["opportunity", "list", "assignment", "person"]) or None
             else:
                 context_label = None
 
             # Append extracted values to the list
             meetings_list.append({"Date": meeting_date, "Year": meeting_year, "Week": meeting_week, "Type": 'Meeting',
-                                  "Author": meeting_organizer.split()[0], "Note Name(s)": None, "Note Type": None,
-                                  "Note Header": meeting_title, "Note Tag(s)": meeting_tag, "Company": meeting_company, 
-                                  "Consultants": meeting_consultants, "Context Name(s)": context_name, "Context Type(s)": context_label})
+                                  "Author": meeting_organizer.split()[0], "Note Name(s)": None, "Note Type(s)": None,
+                                  "Note Header": meeting_title, "Note Tag(s)": meeting_tag, "Company": meeting_company,
+                                  "Consultants": meeting_consultants, "Context Name(s)": context_name,
+                                  "Context Type(s)": context_label})
 
     # Create a DataFrame from the list of meeting data points
     meetings_df = pd.DataFrame(meetings_list).reset_index(drop=True)
-    meetings_df = meetings_df[["Author", "Week", "Date", "Note Type(s)", "Note Header", "Note Name(s)", "Note Tag(s)", 
-                               "Context Type(s)", "Context Name(s)"]]
-    
+    meetings_df = meetings_df[["Author", "Week", "Date", "Note Type(s)", "Note Header", "Note Name(s)", "Note Tag(s)",
+                               "Context Type(s)", "Context Name(s)"]][
+        meetings_df["Year"] == 2025].sort_values(by="Date", ascending=False)
+
     return meetings_df
 
 
@@ -208,11 +211,16 @@ def fetch_notes(api_tokens):
             note_notable_id = note["notable"]["id"] if "notable" in note and note["notable"] else None
             note_notable_type = note["notable"]["type"] if "notable" in note and note["notable"] else None
             note_notable_name = note["notable"]["name"] if "notable" in note and note["notable"] else None
-            note_context_project_id = ', '.join([str(i["projectId"]) for i in note["context"]]) if "context" in note and note["context"] else None
+            note_context_project_id = ', '.join([str(i["projectId"]) for i in note["context"]]) if "context" in note and \
+                                                                                                   note[
+                                                                                                       "context"] else None
             if note_context_project_id is not None:
-                note_context_project_id = note_context_project_id.replace(', None', '').replace('None, ', '').replace('None', '').strip()
-            note_context_type = ', '.join([i["type"] for i in note["context"]]) if "context" in note and note["context"] else None
-            note_context_name = ', '.join([i["name"] for i in note["context"]]) if "context" in note and note["context"] else None
+                note_context_project_id = note_context_project_id.replace(', None', '').replace('None, ', '').replace(
+                    'None', '').strip()
+            note_context_type = ', '.join([i["type"] for i in note["context"]]) if "context" in note and note[
+                "context"] else None
+            note_context_name = ', '.join([i["name"] for i in note["context"]]) if "context" in note and note[
+                "context"] else None
             note_text_header = note["textStripped"].split('\n')[0]
 
             start_of_year = pd.to_datetime(f'{note_date.year}-01-01')
@@ -230,16 +238,19 @@ def fetch_notes(api_tokens):
 
             user_notes_list.append(
                 {"Date": note_date, "Year": note_year, "Week": note_week, "Month": note_month, "Quarter": note_quarter,
-                 "Author": note_author.split()[0], "Note Tag(s)": note_type, "Notable ID": note_notable_id, "Type": 'Note',
+                 "Author": note_author.split()[0], "Note Tag(s)": note_type, "Notable ID": note_notable_id,
+                 "Type": 'Note',
                  "Note Type(s)": note_notable_type, "Note Name(s)": note_notable_name,
                  "Context Type(s)": note_context_type, "Context Name(s)": note_context_name,
                  "Note Header": note_text_header})
 
     user_note_df = pd.DataFrame(user_notes_list)
-    user_note_df = user_note_df[["Author", "Date", "Week", "Note Type(s)", "Note Tag(s)", "Note Name(s)",
-                                 "Context Type(s)", "Context Name(s)", "Note Header"]][user_note_df["Year"] == 2025].sort_values(by="Date", ascending=False)
+    user_note_df = user_note_df[["Author", "Date", "Week", "Type", "Note Type(s)", "Note Tag(s)", "Note Name(s)",
+                                 "Context Type(s)", "Context Name(s)", "Note Header"]][
+        user_note_df["Year"] == 2025].sort_values(by="Date", ascending=False)
 
     return user_note_df
+
 
 # ---------- Streamlit App ----------
 st.set_page_config(page_title="Mandate System Usage - WIPs", layout="wide")

@@ -287,6 +287,6 @@ if context_project_input:
     filtered_notes_meetings = filtered_notes_meetings[filtered_notes_meetings["Context Name(s)"].str.contains(context_project_input, case=False, na=False)]
 
 # ---------- Display ----------
-st.write(f"### Showing {len(filtered_notes)} notes")
+st.write(f"### Showing {len(filtered_notes_meetings)} notes")
 st.data_editor(filtered_notes.reset_index(drop=True), use_container_width=True, disabled=True)
 

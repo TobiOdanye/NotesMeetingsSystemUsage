@@ -169,10 +169,10 @@ def fetch_meetings(api_tokens):
 
     # Create a DataFrame from the list of meeting data points
     meetings_df = pd.DataFrame(meetings_list).reset_index(drop=True)
+    meetings_df = meetings_df[meetings_df["Year"] == 2025]
     meetings_df = meetings_df[["Author", "Week", "Date", "Note Type(s)", "Note Header", "Note Name(s)", "Note Tag(s)",
-                               "Context Type(s)", "Context Name(s)"]][
-        meetings_df["Year"] == 2025].sort_values(by="Date", ascending=False)
-
+                               "Context Type(s)", "Context Name(s)"]].sort_values(by="Date", ascending=False)
+    
     return meetings_df
 
 

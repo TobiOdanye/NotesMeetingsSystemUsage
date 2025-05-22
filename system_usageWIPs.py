@@ -288,5 +288,5 @@ if context_project_input:
 
 # ---------- Display ----------
 st.write(f"### Showing {len(filtered_notes_meetings)} notes")
-st.data_editor(filtered_notes.reset_index(drop=True), use_container_width=True, disabled=True)
+st.data_editor(filtered_notes_meetings.reset_index(drop=True), use_container_width=True, disabled=True)
 

@@ -285,7 +285,7 @@ if week_input:
     filtered_notes_meetings = filtered_notes_meetings[filtered_notes_meetings["Week"] == week_input]
 
 if type_input:
-    filtered_notes_meetings = filtered_notes_meetings[filtered_notes_meetings["Note or Meeting Tag(s)"] == type_input]
+    filtered_notes_meetings = filtered_notes_meetings[filtered_notes_meetings["Note Type(s)"].str.contains(type_input, case=False, na=False)]
 
 if context_project_input:
     filtered_notes_meetings = filtered_notes_meetings[filtered_notes_meetings["Context Name(s)"].str.contains(context_project_input, case=False, na=False)]

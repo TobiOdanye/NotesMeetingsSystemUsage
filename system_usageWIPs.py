@@ -256,7 +256,7 @@ def fetch_notes(api_tokens):
 st.set_page_config(page_title="Notes and Meetings System Usage (2025)", layout="wide")
 st.title("Notes and Meetings System Usage (2025)")
 
-@st.cache_data(show_spinner="Loading notes from Ezekia API...")
+@st.cache_data(show_spinner="Loading notes/meetings from Ezekia API...")
 def load_notes_meetings():
     api_tokens = fetch_api_tokens()
     notes = fetch_notes(api_tokens)

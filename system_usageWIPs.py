@@ -254,7 +254,7 @@ def fetch_notes(api_tokens):
 
 # ---------- Streamlit App ----------
 st.set_page_config(page_title="Notes and Meetings System Usage (2025)", layout="wide")
-st.title("Mandate System Usage - WIPs (2025)")
+st.title("Notes and Meetings System Usage (2025)")
 
 @st.cache_data(show_spinner="Loading notes from Ezekia API...")
 def load_notes_meetings():

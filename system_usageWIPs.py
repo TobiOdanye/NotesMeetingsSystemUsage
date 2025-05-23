@@ -163,14 +163,14 @@ def fetch_meetings(api_tokens):
             # Append extracted values to the list
             meetings_list.append({"Date": meeting_date, "Year": meeting_year, "Week": meeting_week, "Type": 'Meeting',
                                   "Author": meeting_organizer.split()[0], "Note Name(s)": None, "Note Type(s)": None,
-                                  "Note Header": meeting_title, "Note Tag(s)": meeting_tag, "Company": meeting_company,
+                                  "Note Header": meeting_title, "Note or Meeting Tag(s)": meeting_tag, "Company": meeting_company,
                                   "Consultants": meeting_consultants, "Context Name(s)": context_name,
                                   "Context Type(s)": context_label})
 
     # Create a DataFrame from the list of meeting data points
     meetings_df = pd.DataFrame(meetings_list).reset_index(drop=True)
     meetings_df = meetings_df[meetings_df["Year"] == '2025']
-    meetings_df = meetings_df[["Author", "Week", "Date", "Note Type(s)", "Note Header", "Note Name(s)", "Note Tag(s)",
+    meetings_df = meetings_df[["Author", "Week", "Date", "Type", "Note Type(s)", "Note Header", "Note Name(s)", "Note or Meeting Tag(s)",
                                "Context Type(s)", "Context Name(s)"]].sort_values(by="Date", ascending=False)
     
     return meetings_df
@@ -238,14 +238,14 @@ def fetch_notes(api_tokens):
 
             user_notes_list.append(
                 {"Date": note_date, "Year": note_year, "Week": note_week, "Month": note_month, "Quarter": note_quarter,
-                 "Author": note_author.split()[0], "Note Tag(s)": note_type, "Notable ID": note_notable_id,
+                 "Author": note_author.split()[0], "Note or Meeting Tag(s)": note_type, "Notable ID": note_notable_id,
                  "Type": 'Note',
                  "Note Type(s)": note_notable_type, "Note Name(s)": note_notable_name,
                  "Context Type(s)": note_context_type, "Context Name(s)": note_context_name,
                  "Note Header": note_text_header})
 
     user_note_df = pd.DataFrame(user_notes_list)
-    user_note_df = user_note_df[["Author", "Date", "Week", "Type", "Note Type(s)", "Note Tag(s)", "Note Name(s)",
+    user_note_df = user_note_df[["Author", "Date", "Week", "Type", "Note Type(s)", "Note or Meeting Tag(s)", "Note Name(s)",
                                  "Context Type(s)", "Context Name(s)", "Note Header"]][
         user_note_df["Year"] == 2025].sort_values(by="Date", ascending=False)
 
@@ -262,7 +262,7 @@ def load_notes_meetings():
     notes = fetch_notes(api_tokens)
     meetings = fetch_meetings(api_tokens)
     combined_df = pd.concat([notes, meetings], ignore_index=True)
-    combined_df = combined_df[["Author", "Week", "Date", "Type", "Note Type(s)", "Note Header", "Note Name(s)", "Note Tag(s)", "Context Type(s)", "Context Name(s)"]]
+    combined_df = combined_df[["Author", "Week", "Date", "Type", "Note Type(s)", "Note Header", "Note Name(s)", "Note or Meeting Tag(s)", "Context Type(s)", "Context Name(s)"]]
     combined_df = combined_df.rename(columns={col: col.replace('note', 'note or meeting') for col in combined_df.columns if 'note' in col})
     
     return combined_df

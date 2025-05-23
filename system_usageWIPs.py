@@ -253,7 +253,7 @@ def fetch_notes(api_tokens):
 
 
 # ---------- Streamlit App ----------
-st.set_page_config(page_title="Mandate System Usage - WIPs", layout="wide")
+st.set_page_config(page_title="Notes and Meetings System Usage (2025)", layout="wide")
 st.title("Mandate System Usage - WIPs (2025)")
 
 @st.cache_data(show_spinner="Loading notes from Ezekia API...")
@@ -273,6 +273,7 @@ notes_meetings = load_notes_meetings()
 # ---------- Filters ----------
 author_input = st.text_input("Filter by Author")
 week_input = st.number_input("Filter by Week", min_value=1, max_value=53, step=1, format="%d")
+type_input = st.text_input("Filter by Meeting or Note")
 context_project_input = st.text_input("Filter by Mandate Name (partial match allowed)")
 
 filtered_notes_meetings = notes_meetings.copy()
@@ -282,6 +283,9 @@ if author_input:
 
 if week_input:
     filtered_notes_meetings = filtered_notes_meetings[filtered_notes_meetings["Week"] == week_input]
+
+if type_input:
+    filtered_notes_meetings = filtered_notes_meetings[filtered_notes_meetings["Note or Meeting Tag(s)"] == type_input]
 
 if context_project_input:
     filtered_notes_meetings = filtered_notes_meetings[filtered_notes_meetings["Context Name(s)"].str.contains(context_project_input, case=False, na=False)]
